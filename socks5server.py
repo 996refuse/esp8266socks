@@ -41,20 +41,51 @@ class socks5server:
         }
         self.esp8266_linkid_socks_map_q = queue.Queue(5)
         for i in range(5):
-            self.esp8266_linkid_socks_map_q.put(i) 
+            self.esp8266_linkid_socks_map_q.put(i)
+
+        self.esp8266_send    = lambda x, y   : x
+        self.esp8266_recv    = lambda x      : x
+        self.esp8266_close   = lambda x      : x
+        self.esp8266_connect = lambda x, y, z: x
+
+        self.esp8266_close_sync = {
+            0: threading.Semaphore(0),
+            1: threading.Semaphore(0),
+            2: threading.Semaphore(0),
+            3: threading.Semaphore(0),
+            4: threading.Semaphore(0),
+        }
+
+        self.esp8266_connect_sync = {
+            0: threading.Semaphore(0),
+            1: threading.Semaphore(0),
+            2: threading.Semaphore(0),
+            3: threading.Semaphore(0),
+            4: threading.Semaphore(0),
+        }
+
+    def esp8266send(self, func):
+        self.esp8266_send = func
+    def esp8266recv(self, func):
+        self.esp8266_recv = func
+    def esp8266close(self, func):
+        self.esp8266_close = func
+    def esp8266connect(self, func):
+        self.esp8266_connect = func
         
     def buffer_receive(self, sock):
         buf = sock.recv(1024)
-        # if len(buf) == 0:
-        #     self.clean_sock_pair(sock, "client send empty string")
-        #     return
+        if len(buf) == 0:
+            self.clean_sock_pair(sock, "client send empty string")
+            return
         for linkid in self.esp8266_linkid_socks_map:
             if self.esp8266_linkid_socks_map[linkid] == sock:
                 while buf:
                     send_buf = buf[:512]
                     buf = buf[512:]
-                    self.esp8266_send(linkid, send_buf)
-                    # time.sleep(0.2)
+                    print(self.esp8266_send(linkid, send_buf))
+                    print("*** %d, %d" % (linkid, len(send_buf)))
+                    time.sleep(0.04)
                 return
         raise Exception("buffer_receive linkid socks map not found")
             
@@ -67,16 +98,18 @@ class socks5server:
                 return
         raise Exception("buffer_send linkid socks map not found")
         
-    def clean_sock_pair(self, sock, error_msg):
-        # print('clean_sock_pair due to error: %s' % error_msg)
-        
+    def clean_sock_pair(self, sock, error_msg, espclosed=False):
         for linkid in self.esp8266_linkid_socks_map:
             if self.esp8266_linkid_socks_map[linkid] == sock:
-                self.esp8266_linkid_socks_map[linkid] = None
+                print('clean_sock_pair due to error: %s' % error_msg)
+
                 buf = self.esp8266_recv(linkid)
                 if buf:
                     sock.send(buf)
-                self.esp8266_close(linkid)
+                self.esp8266_linkid_socks_map[linkid] = None
+                if not espclosed:
+                    self.esp8266_close(linkid)
+                    self.esp8266_close_sync[linkid].acquire()
                 sock.close()
                 self.esp8266_linkid_socks_map_q.put(linkid)
                 print('$$$$ SOCKS5 proxy from linkid %d destroyed' % linkid)
@@ -128,7 +161,7 @@ class socks5server:
         return dest_host, dest_port
 
     def create_sock_pair(self, client_sock, addr):
-        client_sock.settimeout(5)
+        client_sock.settimeout(1)
 
         dest_host, dest_port = self.establish_socks5(client_sock)
         if None in (dest_host, dest_port):
@@ -140,7 +173,7 @@ class socks5server:
             client_sock.close()
             self.esp8266_linkid_socks_map_q.put(linkid)
             return
-        
+        self.esp8266_connect_sync[linkid].acquire()
         self.esp8266_linkid_socks_map[linkid] = client_sock
 
         client_sock.settimeout(1)
@@ -165,7 +198,7 @@ class socks5server:
             connected_sockets = list(filter(lambda x: x != None, self.esp8266_linkid_socks_map.values()))
             in_socks = [self.server_sock] + connected_sockets
             out_socks = connected_sockets
-            in_ready, out_ready, err_ready = select.select(in_socks, out_socks, [], 0.1)
+            in_ready, out_ready, err_ready = select.select(in_socks, out_socks, [], 1)
 
             for sock in in_ready:
                 if sock == self.server_sock:
@@ -184,7 +217,6 @@ class socks5server:
 
             for sock in err_ready:
                 if sock == self.server_sock:
-                    for linkid in self.esp8266_linkid_socks_map:
-                        if self.esp8266_linkid_socks_map[linkid]:
-                            self.clean_sock_pair(self.esp8266_linkid_socks_map[linkid], 'server socket closed')
-                self.clean_sock_pair(sock, 'socket closed')
+                    raise Exception("service socket error")
+                else:
+                    self.clean_sock_pair(sock, 'client socket closed')

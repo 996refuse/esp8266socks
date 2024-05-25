@@ -92,7 +92,7 @@ class esp8266wifi:
         self.esp8266_serial.write(b'AT+CIPMUX=1\r\n')     # multiple connections
         time.sleep(1)
         self.esp8266_serial.write(b'AT+CWJAP_CUR="%s","%s"\r\n' % (ssid.encode(), password.encode())) # connect wifi
-        time.sleep(7)
+        time.sleep(8)
         # self.esp8266_serial.write(b'AT+CIPSTATUS="%s","%s"\r\n' % (ssid.encode(), password.encode())) # connect wifi
         # time.sleep(1)
         print(self.esp8266_serial.read_all())
@@ -104,7 +104,7 @@ class esp8266wifi:
                 if self.esp8266_readbuf.index(key) < index:
                     index, res, kk = self.esp8266_readbuf.index(key), self.identities[key], key
         if kk in self.identities:
-            # print("%%%%%%", self.esp8266_readbuf[:index+len(kk)])
+            print("%%%%%%", self.esp8266_readbuf[:index+len(kk)])
             self.esp8266_readbuf = self.esp8266_readbuf[index+len(kk):]
 
         if kk in self.identities_at:
@@ -140,6 +140,7 @@ class esp8266wifi:
         
     def esp8266_at(self, at):
         with self.esp8266_at_lock:
+            time.sleep(0.2)
             self.esp8266_writebuf = at
             self.esp8266_at_done.acquire()
             return self.esp8266_at_result
@@ -156,7 +157,6 @@ class esp8266wifi:
     def send(self, linkid, buf):
         if "OK" == self.esp8266_at(('AT+CIPSEND=%d,%d\r\n' % (linkid, len(buf))).encode()):
             while True:
-                self.esp8266_readbuf += self.esp8266_serial.read_all()
                 if b"> " in self.esp8266_readbuf:
                     break
             if "SEND OK" == self.esp8266_at(buf):
