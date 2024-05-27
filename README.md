@@ -1,7 +1,7 @@
 # esp8266socks
 connect your PC to WIFI network by esp8266
 
-![](https://github.com/996refuse/esp8266socks/demo.gif)
+![](https://raw.githubusercontent.com/996refuse/esp8266socks/master/demo.gif)
 
 ### hardware
 
