@@ -80,12 +80,12 @@ class socks5server:
             return
         for linkid in self.esp8266_linkid_socks_map:
             if self.esp8266_linkid_socks_map[linkid] == sock:
+                time.sleep(0.2)
                 while buf:
                     send_buf = buf[:512]
                     buf = buf[512:]
-                    print(self.esp8266_send(linkid, send_buf))
-                    print("*** %d, %d" % (linkid, len(send_buf)))
-                    time.sleep(0.04)
+                    if -1 == self.esp8266_send(linkid, send_buf):
+                        raise Exception("buffer_receive esp8266_send failed")
                 return
         raise Exception("buffer_receive linkid socks map not found")
             
@@ -101,7 +101,7 @@ class socks5server:
     def clean_sock_pair(self, sock, error_msg, espclosed=False):
         for linkid in self.esp8266_linkid_socks_map:
             if self.esp8266_linkid_socks_map[linkid] == sock:
-                print('clean_sock_pair due to error: %s' % error_msg)
+                # print('clean_sock_pair due to error: %s' % error_msg)
 
                 buf = self.esp8266_recv(linkid)
                 if buf:
@@ -112,7 +112,14 @@ class socks5server:
                     self.esp8266_close_sync[linkid].acquire()
                 sock.close()
                 self.esp8266_linkid_socks_map_q.put(linkid)
-                print('$$$$ SOCKS5 proxy from linkid %d destroyed' % linkid)
+                # print('$$$$ SOCKS5 proxy from linkid %d destroyed' % linkid)
+                res = []
+                for k in range(5):
+                    if self.esp8266_linkid_socks_map[k] == None:
+                        res.append("O")
+                    else:
+                        res.append("*")
+                print("$$$$D", " ".join(res))
                 break
 
     def establish_socks5(self, sock):
@@ -179,8 +186,15 @@ class socks5server:
         client_sock.settimeout(1)
         client_sock.setblocking(0)
 
-        print('$$$$ SOCKS5 proxy from %s:%d to %s:%d linkid %d established' %
-                         (addr[0], addr[1], dest_host, dest_port, linkid))
+        res = []
+        for k in range(5):
+            if self.esp8266_linkid_socks_map[k] == None:
+                res.append("O")
+            else:
+                res.append("*")
+        print("$$$$E", " ".join(res))
+        # print('$$$$ SOCKS5 proxy from %s:%d to %s:%d linkid %d established' %
+        #                  (addr[0], addr[1], dest_host, dest_port, linkid))
 
     def accept_connection(self):
         (client, addr) = self.server_sock.accept()
@@ -198,7 +212,7 @@ class socks5server:
             connected_sockets = list(filter(lambda x: x != None, self.esp8266_linkid_socks_map.values()))
             in_socks = [self.server_sock] + connected_sockets
             out_socks = connected_sockets
-            in_ready, out_ready, err_ready = select.select(in_socks, out_socks, [], 1)
+            in_ready, out_ready, err_ready = select.select(in_socks, out_socks, [], 0.2)
 
             for sock in in_ready:
                 if sock == self.server_sock:

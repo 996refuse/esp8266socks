@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     @e.onclose
     def onclose(linkid):
-        print("#CLOSE", linkid)
+        # print("#CLOSE", linkid)
         if s.esp8266_linkid_socks_map[linkid]:
             s.clean_sock_pair(s.esp8266_linkid_socks_map[linkid], "server socket closed", True)
             return
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     @e.onconnect
     def onconnect(linkid):
-        print("#CONNECT", linkid)
+        # print("#CONNECT", linkid)
         s.esp8266_connect_sync[linkid].release()
 
     if args.boot:

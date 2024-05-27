@@ -104,7 +104,7 @@ class esp8266wifi:
                 if self.esp8266_readbuf.index(key) < index:
                     index, res, kk = self.esp8266_readbuf.index(key), self.identities[key], key
         if kk in self.identities:
-            print("%%%%%%", self.esp8266_readbuf[:index+len(kk)])
+            print("==== ", self.esp8266_readbuf[:index+len(kk)])
             self.esp8266_readbuf = self.esp8266_readbuf[index+len(kk):]
 
         if kk in self.identities_at:
@@ -119,7 +119,7 @@ class esp8266wifi:
         def daemon():
             try:
                 while True:
-                    iready, oready, eready = select.select([self.esp8266_serial_fileno], [self.esp8266_serial_fileno], [], 0.1)
+                    iready, oready, eready = select.select([self.esp8266_serial_fileno], [self.esp8266_serial_fileno], [], 0.02)
                     if iready:
                         self.esp8266_readbuf += self.esp8266_serial.read_all()
                         rs = True
@@ -159,6 +159,7 @@ class esp8266wifi:
             while True:
                 if b"> " in self.esp8266_readbuf:
                     break
+            # print(len(buf))
             if "SEND OK" == self.esp8266_at(buf):
                 return len(buf)
         return -1
