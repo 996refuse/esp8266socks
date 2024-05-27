@@ -51,6 +51,16 @@ python main.py --host <ip address> --port <port> --serial /dev/tty<serial port> 
        ----------
 ```
 
+### annoying hardware/firmware issues
+
+#### *busy p...*
+
+when select timeout is too long (more than 1s), all requests burst at one moment. cause esp8266 enter "bush p..." state.
+
+#### *busy s...*
+
+still can't find the root cause
+
 ### license
 
 WTFPL http://www.wtfpl.net/
