@@ -13,6 +13,16 @@ notes:
 2. 3.3v power supply to esp01 is important, esp01's unstable issue is mostly possibly caused by the power supply
 3. require good heat dissipation on esp8266 chip, when the wifi is turning on, the power consumption is becoming high and temperature is becoming high, it's very possible lead to stuck.
 
+### Internet speed on esp8266
+
+let's take 115200 baud rate as an example, it's the default uart serial config on esp8266.
+
+```
+115200bit/s = 14.0625kb/s
+```
+
+so in theory, the speed can never be faster than 14kb/s. today's most modern web page is about 5mb, the it costs more than 6 minutes to load it.
+
 ### usage
 
 ```sh
